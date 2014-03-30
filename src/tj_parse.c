@@ -1990,8 +1990,9 @@ static void parse_mconcat (LexState *ls, ExpDesc *e1)
     expr(ls, &e2);
     expr_tonextreg(fs, &e2);
   }
-  for (rc = e2.u.s.info; rc >= e1->u.s.info; rc--)
+  for (rc = e2.u.s.info; rc > e1->u.s.info; rc--) {
     bcreg_free(fs, rc);
+  }
   e1->u.s.info = bcemit_ABC(fs, BC_CAT, 0, e1->u.s.info, e2.u.s.info);
   e1->k = VRELOCABLE;
   fs->bcbase[fs->pc - 1].line = line;
