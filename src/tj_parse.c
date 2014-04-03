@@ -2482,7 +2482,7 @@ static void parse_loop(LexState *ls)
   var_new_fixed(ls, FORL_STEP, VARNAME_FOR_STEP);
   /* Visible copy of index variable. */
   varname = lex_str(ls);  /* Get first variable name. */
-  var_new(ls, FORL_EXT, varname, 1);
+  var_new(ls, FORL_EXT, varname, 0);
   expr_next(ls);  /* initial value */
   expr_next(ls);  /* stop */
   expr_next(ls);  /* step */
@@ -2519,7 +2519,7 @@ static void parse_for(LexState *ls)
   /* Visible variables returned from iterator. */
   lex_check(ls, '(');
   while (!lex_opt(ls, ')'))
-    var_new(ls, nvars++, lex_str(ls), 1);
+    var_new(ls, nvars++, lex_str(ls), 0);
   lex_check(ls, '(');
   assign_adjust(ls, 3, expr_list(ls, &e), &e);
   bcreg_bump(fs, 3);  /* The iterator needs another 3 slots (func + 2 args). */
