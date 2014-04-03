@@ -146,6 +146,11 @@ uninstall:
 	$(RMDIR) $(UNINSTALL_DIRS) || :
 	@echo "==== Successfully uninstalled TvmJIT $(VERSION) from $(PREFIX) ===="
 
+test: $(INSTALL_DEP)
+	make -C src test
+fulltest: $(INSTALL_DEP)
+	make -C src fulltest
+
 ##############################################################################
 
 amalg:
