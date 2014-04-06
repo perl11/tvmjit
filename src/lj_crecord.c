@@ -1317,8 +1317,7 @@ static TRef crec_arith_ptr(jit_State *J, TRef *sp, CType **s, MMS mm)
 }
 
 /* Record ctype arithmetic metamethods. */
-static TRef crec_arith_meta(jit_State *J, TRef *sp, CTState *cts,
-			    RecordFFData *rd)
+static void crec_arith_meta(jit_State *J, CTState *cts, RecordFFData *rd)
 {
   cTValue *tv = NULL;
   if (J->base[0]) {
@@ -1339,20 +1338,13 @@ static TRef crec_arith_meta(jit_State *J, TRef *sp, CTState *cts,
     if (tvisfunc(tv)) {
       J->base[-1] = lj_ir_kfunc(J, funcV(tv)) | TREF_FRAME;
       rd->nres = -1;  /* Pending tailcall. */
-      return 0;
+      return;
     }  /* NYI: non-function metamethods. */
-  } else if ((MMS)rd->data == MM_eq) {  /* Fallback cdata pointer comparison. */
-    if (sp[0] && sp[1]) {
-      /* Assume true comparison. Fixup and emit pending guard later. */
-      lj_ir_set(J, IRTG(IR_EQ, IRT_PTR), sp[0], sp[1]);
-      J->postproc = LJ_POST_FIXGUARD;
-      return TREF_TRUE;
-    } else {
-      return TREF_FALSE;
-    }
+  } else if ((MMS)rd->data == MM_eq) {
+    J->base[0] = TREF_FALSE;
+    return;
   }
   lj_trace_err(J, LJ_TRERR_BADTYPE);
-  return 0;
 }
 
 void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
@@ -1365,7 +1357,7 @@ void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
     TRef tr = J->base[i];
     CType *ct = ctype_get(cts, CTID_DOUBLE);
     if (!tr) {
-      lj_trace_err(J, LJ_TRERR_BADTYPE);
+      goto trymeta;
     } else if (tref_iscdata(tr)) {
       CTypeID id = argv2cdata(J, tr, &rd->argv[i])->ctypeid;
       IRType t;
@@ -1395,12 +1387,11 @@ void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
       }
       if (ctype_isenum(ct->info)) ct = ctype_child(cts, ct);
       if (ctype_isnum(ct->info)) {
-	if (t == IRT_CDATA) {
-	  tr = 0;
-	} else {
-	  if (t == IRT_I64 || t == IRT_U64) lj_needsplit(J);
-	  tr = emitir(IRT(IR_XLOAD, t), tr, 0);
-	}
+	if (t == IRT_CDATA) goto trymeta;
+	if (t == IRT_I64 || t == IRT_U64) lj_needsplit(J);
+	tr = emitir(IRT(IR_XLOAD, t), tr, 0);
+      } else if (!(ctype_isptr(ct->info) || ctype_isrefarray(ct->info))) {
+	goto trymeta;
       }
     } else if (tref_isnil(tr)) {
       tr = lj_ir_kptr(J, NULL);
@@ -1423,7 +1414,7 @@ void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
 	}  /* else: interpreter will throw. */
       }  /* else: interpreter will throw. */
     } else if (!tref_isnum(tr)) {
-      tr = 0;
+      goto trymeta;
     }
   ok:
     s[i] = ct;
@@ -1431,20 +1422,22 @@ void LJ_FASTCALL recff_cdata_arith(jit_State *J, RecordFFData *rd)
   }
   {
     TRef tr;
-    if (!(tr = crec_arith_int64(J, sp, s, (MMS)rd->data)) &&
-	!(tr = crec_arith_ptr(J, sp, s, (MMS)rd->data)) &&
-	!(tr = crec_arith_meta(J, sp, cts, rd)))
-      return;
-    J->base[0] = tr;
-    /* Fixup cdata comparisons, too. Avoids some cdata escapes. */
-    if (J->postproc == LJ_POST_FIXGUARD && frame_iscont(J->L->base-1) &&
-	!irt_isguard(J->guardemit)) {
-      const BCIns *pc = frame_contpc(J->L->base-1) - 1;
-      if (bc_op(*pc) <= BC_ISNEP) {
-	setframe_pc(&J2G(J)->tmptv, pc);
-	J2G(J)->tmptv.u32.lo = ((tref_istrue(tr) ^ bc_op(*pc)) & 1);
-	J->postproc = LJ_POST_FIXCOMP;
+    if ((tr = crec_arith_int64(J, sp, s, (MMS)rd->data)) ||
+	(tr = crec_arith_ptr(J, sp, s, (MMS)rd->data))) {
+      J->base[0] = tr;
+      /* Fixup cdata comparisons, too. Avoids some cdata escapes. */
+      if (J->postproc == LJ_POST_FIXGUARD && frame_iscont(J->L->base-1) &&
+	  !irt_isguard(J->guardemit)) {
+	const BCIns *pc = frame_contpc(J->L->base-1) - 1;
+	if (bc_op(*pc) <= BC_ISNEP) {
+	  setframe_pc(&J2G(J)->tmptv, pc);
+	  J2G(J)->tmptv.u32.lo = ((tref_istrue(tr) ^ bc_op(*pc)) & 1);
+	  J->postproc = LJ_POST_FIXCOMP;
+	}
       }
+    } else {
+    trymeta:
+      crec_arith_meta(J, cts, rd);
     }
   }
 }
