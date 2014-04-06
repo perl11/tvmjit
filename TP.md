@@ -86,6 +86,11 @@ function call
 
 function call with results adjusted to 1
 
+in expression with operator (for example `(!neg (!call f))`),
+`!call` is automatically replaced by `!call1`
+
+tail call optimization is disabled with `(!return (!call1 ...))`
+
 #### `(!callmeth obj meth prm1 ... prmn)`
 
 method call
