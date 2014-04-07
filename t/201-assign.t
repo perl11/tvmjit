@@ -12,7 +12,7 @@
 (!let load load)
 (!let print print)
 
-(!call plan 40)
+(!call plan 41)
 
 (!call is b !nil "global variable")
 (!assign b 10)
@@ -103,3 +103,7 @@
 
 (!assign a (!do (!let b 2)(!let c 3)(!add b c)))
 (!call is a 5)
+
+(!let f (!lambda () (!return 7)))
+(!assign a (!do (!call f)))
+(!call is a 7)
