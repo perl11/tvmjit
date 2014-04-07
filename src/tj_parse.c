@@ -1968,10 +1968,10 @@ static BinOpr token2binop(unsigned sp)
 static void parse_binop (LexState *ls, unsigned sp, ExpDesc *e1)
 {
   FuncState *fs = ls->fs;
+  ExpDesc e2;
   BinOpr op = token2binop(sp);
   expr(ls, e1);
   bcemit_binop_left(fs, op, e1);
-  ExpDesc e2;
   expr(ls, &e2);
   bcemit_binop(fs, op, e1, &e2);
   lex_check(ls, ')');
@@ -2202,8 +2202,8 @@ static void parse_assignment_(LexState *ls, LHSVarList *lh, BCReg nvars)
 /* Parse 'massign' statement. */
 static void parse_massign(LexState *ls)
 {
-  lex_check(ls, '(');
   LHSVarList v;
+  lex_check(ls, '(');
   v.prev = NULL;
   expr(ls, &v.v);
   parse_assignment_(ls, &v, 1);
