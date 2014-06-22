@@ -35,7 +35,7 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 
 
 /*
-** Decode an UTF-8 sequence, returning NULL if byte sequence is invalid.
+** Decode one UTF-8 sequence, returning NULL if byte sequence is invalid.
 */
 static const char *utf8_decode (const char *o, int *val) {
   static unsigned int limits[] = {0xFF, 0x7F, 0x7FF, 0xFFFF};
@@ -64,33 +64,39 @@ static const char *utf8_decode (const char *o, int *val) {
 
 
 /*
-** utf8len(s, [i])   --> number of codepoints in 's' after 'i';
-** nil if 's' not well formed
+** utf8len(s [, i [, j]]) --> number of characters that start in the
+** range [i,j], or nil + current position if 's' is not well formed in
+** that interval
 */
 LJLIB_CF(utf8_len)
 {
   int n = 0;
-  const char *ends;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  luaL_argcheck(L, 1 <= posi && posi <= (lua_Integer)len+1, 1,
+  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
+  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
                    "initial position out of string");
-  ends = s + len;
-  s += posi - 1;
-  while (s < ends && (s = utf8_decode(s, NULL)) != NULL)
+  luaL_argcheck(L, --posj < (lua_Integer)len, 3,
+                   "final position out of string");
+  while (posi <= posj) {
+    const char *s1 = utf8_decode(s + posi, NULL);
+    if (s1 == NULL) {  /* conversion error? */
+      lua_pushnil(L);  /* return nil ... */
+      lua_pushinteger(L, posi + 1);  /* ... and current position */
+      return 2;
+    }
+    posi = s1 - s;
     n++;
-  if (s == ends)
-    lua_pushinteger(L, n);
-  else
-    lua_pushnil(L);
+  }
+  lua_pushinteger(L, n);
   return 1;
 }
 
 
 /*
 ** codepoint(s, [i, [j]])  -> returns codepoints for all characters
-** between i and j
+** that start in the range [i,j]
 */
 LJLIB_CF(utf8_codepoint)
 {

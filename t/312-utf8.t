@@ -83,7 +83,7 @@
 (!call is (!call len "ABC" -2) 2)
 
 (!call error_contains (!lambda () (!call len "A" 3))
-                      ": bad argument #1 to 'len' (initial position out of string)"
+                      ": bad argument #2 to 'len' (initial position out of string)"
                       "function len (out of range))")
 
 (!call is (!call offset "A\u20AC3" 1) 1 "function offset")
