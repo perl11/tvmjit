@@ -27,7 +27,8 @@
     "tab\t"
     "quote\""
     "\x3A"      ; hexadecimal 8-bits character
-    "\u20AC"    ; unicode char UTF-8 encoded
+    "\u20AC"    ; unicode char UTF-8 encoded (4 hexadecimals)
+    "\U000020AC"; unicode char UTF-8 encoded (8 hexadecimals)
     "
     multiline
     string

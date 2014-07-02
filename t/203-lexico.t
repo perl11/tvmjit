@@ -15,7 +15,7 @@
 (!let is is)
 (!let contains contains)
 
-(!call plan 34)
+(!call plan 48)
 
 (!call is "\x41" "A")
 (!call is "\x3d" "=")
@@ -25,6 +25,20 @@
 (!call is "\u003D" "=")
 (!call is "\u00e7" "ç")
 (!call is "\u20ac" "€")
+(!call is "\u0000" "\x00")
+(!call is "\u0080" "\xC2\x80")
+(!call is "\u0800" "\xE0\xA0\x80")
+
+(!call is "\U0000003d" "=")
+(!call is "\U0000003D" "=")
+(!call is "\U000000e7" "ç")
+(!call is "\U000020ac" "€")
+(!call is "\U00000000" "\x00")
+(!call is "\U00000080" "\xC2\x80")
+(!call is "\U00000800" "\xE0\xA0\x80")
+(!call is "\U00010000" "\xF0\x90\x80\x80")
+(!call is "\U00200000" "\xF8\x88\x80\x80\x80")
+(!call is "\U04000000" "\xFC\x84\x80\x80\x80\x80")
 
 (!call is "\a" (!call char 7))
 (!call is "\b" (!call char 8))
@@ -41,6 +55,9 @@
 (!call contains msg ": invalid escape sequence near '\"A'")
 
 (!define (f msg) ((!call load "(!let a \"A\\uvwyz\")")))
+(!call contains msg ": invalid escape sequence near '\"A'")
+
+(!define (f msg) ((!call load "(!let a \"A\\UVWYZ0000\")")))
 (!call contains msg ": invalid escape sequence near '\"A'")
 
 (!define (f msg) ((!call load "(!let a \"A\\0\")")))
