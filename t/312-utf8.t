@@ -10,7 +10,7 @@
 (!call (!index tvm "dofile") "TAP.tp")
 
 (!let char (!index utf8 "char"))
-(!let charpatt (!index utf8 "charpatt"))
+(!let charpattern (!index utf8 "charpattern"))
 (!let codes (!index utf8 "codes"))
 (!let codepoint (!index utf8 "codepoint"))
 (!let len (!index utf8 "len"))
@@ -35,7 +35,7 @@
                       ": bad argument #2 to 'char' (number expected, got string)"
                       "function char (bad)")
 
-(!call is charpatt "[\x00-\x7F\xC2-\xF4][\x80-\xBF]*" "charpatt")
+(!call is charpattern "[\x00-\x7F\xC2-\xF4][\x80-\xBF]*" "charpattern")
 
 (!let ap ())
 (!let ac ())

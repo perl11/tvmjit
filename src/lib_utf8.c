@@ -211,7 +211,7 @@ LJLIB_CF(utf8_codes)
 int luaopen_utf8 (lua_State *L) {
   LJ_LIB_REG(L, LUA_UTF8LIBNAME, utf8);
   lua_pushliteral(L, UTF8PATT);
-  lua_setfield(L, -2, "charpatt"); /* utf8.charpatt = UTF8PATT */
+  lua_setfield(L, -2, "charpattern"); /* utf8.charpattern = UTF8PATT */
   lua_getglobal(L, "tvm");
   lua_getfield(L, -1, "wchar");
   lua_remove(L, -2); /* tvm */
