@@ -135,35 +135,40 @@ LJLIB_CF(utf8_offset)
 {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n  = luaL_checkint(L, 2);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 3, 1), len) - 1;
-  luaL_argcheck(L, 0 <= posi && posi <= (lua_Integer)len, 3,
+  lua_Integer n  = luaL_checkinteger(L, 2);
+  lua_Integer posi = (n >= 0) ? 1 : len + 1;
+  posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
+  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
                    "position out of range");
   if (n == 0) {
     /* find beginning of current byte sequence */
     while (posi > 0 && iscont(s + posi)) posi--;
   }
-  else if (n < 0) {
-    while (n < 0 && posi > 0) {  /* move back */
-      do {  /* find beginning of previous character */
-        posi--;
-      } while (posi > 0 && iscont(s + posi));
-      n++;
-    }
-  }
   else {
-    n--;  /* do not move for 1st character */
-    while (n > 0 && posi < (lua_Integer)len) {
-      do {  /* find beginning of next character */
-        posi++;
-      } while (iscont(s + posi));  /* ('\0' is not continuation) */
-      n--;
-    }
+    if (iscont(s + posi))
+      luaL_error(L, "initial position is a continuation byte");
+    if (n < 0) {
+       while (n < 0 && posi > 0) {  /* move back */
+         do {  /* find beginning of previous character */
+           posi--;
+         } while (posi > 0 && iscont(s + posi));
+         n++;
+       }
+     }
+     else {
+       n--;  /* do not move for 1st character */
+       while (n > 0 && posi < (lua_Integer)len) {
+         do {  /* find beginning of next character */
+           posi++;
+         } while (iscont(s + posi));  /* (cannot pass final '\0') */
+         n--;
+       }
+     }
   }
-  if (n == 0)
+  if (n == 0)  /* did it find given character? */
     lua_pushinteger(L, posi + 1);
-  else
-    lua_pushnil(L);  /* no such position */
+  else  /* no such character */
+    lua_pushnil(L);
   return 1;
 }
 
@@ -171,7 +176,7 @@ LJLIB_CF(utf8_offset)
 static int iter_aux (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n = lua_tointeger(L, 2) - 1;
+  lua_Integer n = lua_tointeger(L, 2) - 1;
   if (n < 0)  /* first iteration? */
     n = 0;  /* start from here */
   else if (n < (lua_Integer)len) {
