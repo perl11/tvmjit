@@ -85,7 +85,7 @@ function call
 
 #### `(!call1 fct prm1 ... prmn)`
 
-function call with results adjusted to 1
+function call; if function returns multiple results, only first is retained
 
 in expression with operator (for example `(!neg (!call f))`),
 `!call` is automatically replaced by `!call1`
@@ -98,7 +98,7 @@ method call
 
 #### `(!callmeth1 obj meth prm1 ... prmn)`
 
-method call with results adjusted to 1
+method call; if method returns multiple results, only first is retained
 
 #### `(!concat expr1 expr2)`
 
