@@ -199,6 +199,78 @@ static void read_string(LexState *ls)
 	  c = 0x80 | (c & 0x3f);
 	}
 	break;
+      case 'U':  /* Unicode escape '\UXXXXXXXX'. */
+	c = (next(ls) & 15u) << 28;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 28;
+	}
+	c += (next(ls) & 15u) << 24;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 24;
+	}
+	c += (next(ls) & 15u) << 20;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 20;
+	}
+	c += (next(ls) & 15u) << 16;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 16;
+	}
+	c += (next(ls) & 15u) << 12;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 12;
+	}
+	c += (next(ls) & 15u) << 8;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 8;
+	}
+	c += (next(ls) & 15u) << 4;
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9 << 4;
+	}
+	c += (next(ls) & 15u);
+	if (!lj_char_isdigit(ls->current)) {
+	  if (!lj_char_isxdigit(ls->current)) goto err_xesc;
+	  c += 9;
+	}
+	if (c >= 0x4000000) {
+	  save(ls, 0xFC | (c >> 30));
+	  save(ls, 0x80 | ((c >> 24) & 0x3f));
+	  save(ls, 0x80 | ((c >> 18) & 0x3f));
+	  save(ls, 0x80 | ((c >> 12) & 0x3f));
+	  save(ls, 0x80 | ((c >> 6) & 0x3f));
+	  c = 0x80 | (c & 0x3f);
+	}
+	else if (c >= 0x200000) {
+	  save(ls, 0xF8 | (c >> 24));
+	  save(ls, 0x80 | ((c >> 18) & 0x3f));
+	  save(ls, 0x80 | ((c >> 12) & 0x3f));
+	  save(ls, 0x80 | ((c >> 6) & 0x3f));
+	  c = 0x80 | (c & 0x3f);
+	}
+	else if (c >= 0x10000) {
+	  save(ls, 0xF0 | (c >> 18));
+	  save(ls, 0x80 | ((c >> 12) & 0x3f));
+	  save(ls, 0x80 | ((c >> 6) & 0x3f));
+	  c = 0x80 | (c & 0x3f);
+	}
+	else if (c >= 0x0800) {
+	  save(ls, 0xE0 | (c >> 12));
+	  save(ls, 0x80 | ((c >> 6) & 0x3f));
+	  c = 0x80 | (c & 0x3f);
+	}
+	else if (c >= 0x0080) {
+	  save(ls, 0xC0 | (c >> 6));
+	  c = 0x80 | (c & 0x3f);
+	}
+	break;
       case '\\': case '\"': case '\'': break;
       case END_OF_STREAM: continue;
       default:

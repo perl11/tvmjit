@@ -35,7 +35,7 @@ static lua_Integer u_posrelat (lua_Integer pos, size_t len) {
 
 
 /*
-** Decode an UTF-8 sequence, returning NULL if byte sequence is invalid.
+** Decode one UTF-8 sequence, returning NULL if byte sequence is invalid.
 */
 static const char *utf8_decode (const char *o, int *val) {
   static unsigned int limits[] = {0xFF, 0x7F, 0x7FF, 0xFFFF};
@@ -64,33 +64,39 @@ static const char *utf8_decode (const char *o, int *val) {
 
 
 /*
-** utf8len(s, [i])   --> number of codepoints in 's' after 'i';
-** nil if 's' not well formed
+** utf8len(s [, i [, j]]) --> number of characters that start in the
+** range [i,j], or nil + current position if 's' is not well formed in
+** that interval
 */
 LJLIB_CF(utf8_len)
 {
   int n = 0;
-  const char *ends;
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
   lua_Integer posi = u_posrelat(luaL_optinteger(L, 2, 1), len);
-  luaL_argcheck(L, 1 <= posi && posi <= (lua_Integer)len+1, 1,
+  lua_Integer posj = u_posrelat(luaL_optinteger(L, 3, -1), len);
+  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 2,
                    "initial position out of string");
-  ends = s + len;
-  s += posi - 1;
-  while (s < ends && (s = utf8_decode(s, NULL)) != NULL)
+  luaL_argcheck(L, --posj < (lua_Integer)len, 3,
+                   "final position out of string");
+  while (posi <= posj) {
+    const char *s1 = utf8_decode(s + posi, NULL);
+    if (s1 == NULL) {  /* conversion error? */
+      lua_pushnil(L);  /* return nil ... */
+      lua_pushinteger(L, posi + 1);  /* ... and current position */
+      return 2;
+    }
+    posi = s1 - s;
     n++;
-  if (s == ends)
-    lua_pushinteger(L, n);
-  else
-    lua_pushnil(L);
+  }
+  lua_pushinteger(L, n);
   return 1;
 }
 
 
 /*
 ** codepoint(s, [i, [j]])  -> returns codepoints for all characters
-** between i and j
+** that start in the range [i,j]
 */
 LJLIB_CF(utf8_codepoint)
 {
@@ -129,35 +135,40 @@ LJLIB_CF(utf8_offset)
 {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n  = luaL_checkint(L, 2);
-  lua_Integer posi = u_posrelat(luaL_optinteger(L, 3, 1), len) - 1;
-  luaL_argcheck(L, 0 <= posi && posi <= (lua_Integer)len, 3,
+  lua_Integer n  = luaL_checkinteger(L, 2);
+  lua_Integer posi = (n >= 0) ? 1 : len + 1;
+  posi = u_posrelat(luaL_optinteger(L, 3, posi), len);
+  luaL_argcheck(L, 1 <= posi && --posi <= (lua_Integer)len, 3,
                    "position out of range");
   if (n == 0) {
     /* find beginning of current byte sequence */
     while (posi > 0 && iscont(s + posi)) posi--;
   }
-  else if (n < 0) {
-    while (n < 0 && posi > 0) {  /* move back */
-      do {  /* find beginning of previous character */
-        posi--;
-      } while (posi > 0 && iscont(s + posi));
-      n++;
-    }
-  }
   else {
-    n--;  /* do not move for 1st character */
-    while (n > 0 && posi < (lua_Integer)len) {
-      do {  /* find beginning of next character */
-        posi++;
-      } while (iscont(s + posi));  /* ('\0' is not continuation) */
-      n--;
-    }
+    if (iscont(s + posi))
+      luaL_error(L, "initial position is a continuation byte");
+    if (n < 0) {
+       while (n < 0 && posi > 0) {  /* move back */
+         do {  /* find beginning of previous character */
+           posi--;
+         } while (posi > 0 && iscont(s + posi));
+         n++;
+       }
+     }
+     else {
+       n--;  /* do not move for 1st character */
+       while (n > 0 && posi < (lua_Integer)len) {
+         do {  /* find beginning of next character */
+           posi++;
+         } while (iscont(s + posi));  /* (cannot pass final '\0') */
+         n--;
+       }
+     }
   }
-  if (n == 0)
+  if (n == 0)  /* did it find given character? */
     lua_pushinteger(L, posi + 1);
-  else
-    lua_pushnil(L);  /* no such position */
+  else  /* no such character */
+    lua_pushnil(L);
   return 1;
 }
 
@@ -165,7 +176,7 @@ LJLIB_CF(utf8_offset)
 static int iter_aux (lua_State *L) {
   size_t len;
   const char *s = luaL_checklstring(L, 1, &len);
-  int n = lua_tointeger(L, 2) - 1;
+  lua_Integer n = lua_tointeger(L, 2) - 1;
   if (n < 0)  /* first iteration? */
     n = 0;  /* start from here */
   else if (n < (lua_Integer)len) {
@@ -205,7 +216,7 @@ LJLIB_CF(utf8_codes)
 int luaopen_utf8 (lua_State *L) {
   LJ_LIB_REG(L, LUA_UTF8LIBNAME, utf8);
   lua_pushliteral(L, UTF8PATT);
-  lua_setfield(L, -2, "charpatt"); /* utf8.charpatt = UTF8PATT */
+  lua_setfield(L, -2, "charpattern"); /* utf8.charpattern = UTF8PATT */
   lua_getglobal(L, "tvm");
   lua_getfield(L, -1, "wchar");
   lua_remove(L, -2); /* tvm */

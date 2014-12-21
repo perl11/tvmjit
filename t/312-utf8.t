@@ -10,7 +10,7 @@
 (!call (!index tvm "dofile") "TAP.tp")
 
 (!let char (!index utf8 "char"))
-(!let charpatt (!index utf8 "charpatt"))
+(!let charpattern (!index utf8 "charpattern"))
 (!let codes (!index utf8 "codes"))
 (!let codepoint (!index utf8 "codepoint"))
 (!let len (!index utf8 "len"))
@@ -21,7 +21,7 @@
 (!let eq_array eq_array)
 (!let error_contains error_contains)
 
-(!call plan 58)
+(!call plan 69)
 
 (!call is (!call char 65 66 67) "ABC" "function char")
 (!call is (!call char 0x20AC) "\u20AC")
@@ -35,7 +35,7 @@
                       ": bad argument #2 to 'char' (number expected, got string)"
                       "function char (bad)")
 
-(!call is charpatt "[\x00-\x7F\xC2-\xF4][\x80-\xBF]*" "charpatt")
+(!call is charpattern "[\x00-\x7F\xC2-\xF4][\x80-\xBF]*" "charpattern")
 
 (!let ap ())
 (!let ac ())
@@ -58,6 +58,10 @@
                       ": bad argument #1 to 'codes' (string expected, got boolean)"
                       "function codes (true)")
 
+(!call error_contains (!lambda () (!for (p c) ((!call codes "invalid\xFF"))))
+                      ": invalid UTF-8 code"
+                      "function codes (invalid)")
+
 (!call is (!call codepoint "A\u20AC3") 0x41 "function codepoint")
 (!call is (!call codepoint "A\u20AC3" 2) 0x20AC)
 (!call is (!call codepoint "A\u20AC3" (!neg 1)) 0x33)
@@ -73,6 +77,10 @@
                       ": bad argument #3 to 'codepoint' (out of range)"
                       "function codepoint (out of range)")
 
+(!call error_contains (!lambda () (!call codepoint "invalid\xFF" 8))
+                      ": invalid UTF-8 code"
+                      "function codepoint (invalid)")
+
 (!call is (!call len "A") 1 "function len")
 (!call is (!call len "") 0)
 (!call is (!call len "\u0041\u0042\u0043") 3)
@@ -83,8 +91,12 @@
 (!call is (!call len "ABC" -2) 2)
 
 (!call error_contains (!lambda () (!call len "A" 3))
-                      ": bad argument #1 to 'len' (initial position out of string)"
+                      ": bad argument #2 to 'len' (initial position out of string)"
                       "function len (out of range))")
+
+(!let (len pos) ((!call len "invalid\xFF")))
+(!call is len !nil "function len (invalid)")
+(!call is pos 8)
 
 (!call is (!call offset "A\u20AC3" 1) 1 "function offset")
 (!call is (!call offset "A\u20AC3" 2) 2)
@@ -92,7 +104,7 @@
 (!call is (!call offset "A\u20AC3" 4) 6)
 (!call is (!call offset "A\u20AC3" 5) !nil)
 (!call is (!call offset "A\u20AC3" 6) !nil)
-(!call is (!call offset "A\u20AC3" -1) !nil)
+(!call is (!call offset "A\u20AC3" -1) 5)
 (!call is (!call offset "A\u20AC3" 1 2) 2)
 (!call is (!call offset "A\u20AC3" 2 2) 5)
 (!call is (!call offset "A\u20AC3" 3 2) 6)
@@ -116,7 +128,17 @@
 (!call is (!call offset "A\u20AC3" -1 -4) 1)
 (!call is (!call offset "A\u20AC3" -2 -4) !nil)
 
+(!call is (!call offset "A\u20AC3" 0 1) 1)
+(!call is (!call offset "A\u20AC3" 0 2) 2)
+(!call is (!call offset "A\u20AC3" 0 3) 2)
+(!call is (!call offset "A\u20AC3" 0 4) 2)
+(!call is (!call offset "A\u20AC3" 0 5) 5)
+(!call is (!call offset "A\u20AC3" 0 6) 6)
+
 (!call error_contains (!lambda () (!call offset "A\u20AC3" 1 7))
                       ": bad argument #3 to 'offset' (position out of range)"
                       "function offset (out of range)")
 
+(!call error_contains (!lambda () (!call offset "\x80" 1))
+                      ": initial position is a continuation byte"
+                      "function offset (continuation byte)")

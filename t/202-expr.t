@@ -14,7 +14,7 @@
 (!let error_contains error_contains)
 (!let is is)
 
-(!call plan 39)
+(!call plan 44)
 
 (!define x 3.14159)
 (!call is (!sub x (!mod x 0.01)) 3.14 "modulo")
@@ -90,3 +90,21 @@
                       ": 'for' limit must be a number"
                       "loop tonumber")
 
+(!let f (!lambda () (!return 20 22)))
+(!call is (!add (!call f) (!call f)) 40 "!call1 promotion")
+(!call is (!add (!call1 f) (!call1 f)) 40 )
+
+(!let neg (!lambda (n) (!return (!neg n))))
+(!let add (!lambda (a b) (!return (!add a b))))
+
+(!let f (!lambda () (!return 7)))
+(!assign a (!call neg (!do (!call f))))
+(!call is a -7)
+
+(!let g (!lambda () (!return 8 9)))
+(!assign a (!call add (!do (!call g))))
+(!call is a 17)
+
+(!let h (!lambda () (!return (!do (!call f)))))
+(!assign a (!call h))
+(!call is a 7)

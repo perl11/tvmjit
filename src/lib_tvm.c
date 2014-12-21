@@ -89,9 +89,15 @@ LJLIB_CF(tvm_wchar)
   luaL_buffinit(L, &b);
   for (i = 1; i <= nargs; i++) {
     int32_t k = lj_lib_checkint(L, i);
-    if ((k < 0) || (k > 0xffff))
+    if ((k < 0) || (k > 0x10FFFF))
       lj_err_arg(L, i, LJ_ERR_BADVAL);
-    if (k >= 0x0800) {
+    if (k >= 0x10000) {
+      luaL_addchar(&b, 0xF0 | (k >> 18));
+      luaL_addchar(&b, 0x80 | ((k >> 12) & 0x3f));
+      luaL_addchar(&b, 0x80 | ((k >> 6) & 0x3f));
+      luaL_addchar(&b, 0x80 | (k & 0x3f));
+    }
+    else if (k >= 0x0800) {
       luaL_addchar(&b, 0xE0 | (k >> 12));
       luaL_addchar(&b, 0x80 | ((k >> 6) & 0x3f));
       luaL_addchar(&b, 0x80 | (k & 0x3f));

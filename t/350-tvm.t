@@ -52,7 +52,7 @@
                       ": bad argument #2 to 'wchar' (number expected, got string)"
                       "function wchar with bad arg")
 
-(!call error_contains (!lambda () (!call wchar 0 999999))
+(!call error_contains (!lambda () (!call wchar 0 0x110000))
                       ": bad argument #2 to 'wchar' (invalid value)"
                       "function wchar (invalid)")
 
